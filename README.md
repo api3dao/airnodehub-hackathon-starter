@@ -239,4 +239,3 @@ numbers into integers with the number of decimals that you ask for:
 - [Documentation](https://airnodehub-docs.api3.org)
 - [Verifying a signature](https://airnodehub-docs.api3.org/airnode/attestation)
 - [Calling an Airnode, projections and payments](https://airnodehub-docs.api3.org/airnode/http-interface)
-- [API3 Discord](https://discord.gg/api3dao)
