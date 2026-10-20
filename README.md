@@ -135,9 +135,10 @@ every feed that Nodary serves, call `latestFeeds` without parameters.
 
 ## The three checks
 
-The tamper test of the hackathon sends your contract a real response with an edited value, a real response that is too
-old, a real response to a different request and a response signed with the wrong key. The example contract rejects all
-four ([tests](test/NodaryPriceConsumer.t.sol)), because it checks three things:
+The [tamper test](https://api3dao.github.io/airnodehub-hackathon/#judging) of the hackathon sends your contract a real
+response with an edited value, a real response that is too old, a real response to a different request and a response
+signed with the wrong key. The example contract rejects all four ([tests](test/NodaryPriceConsumer.t.sol)), because it
+checks three things:
 
 - **The signer.** Compare the recovered address with an Airnode address that your contract stores. Never trust the
   `airnode` field or the `X-Airnode-Address` header, because whoever forges a response sets those too. The Airnode's
@@ -233,6 +234,7 @@ numbers into integers with the number of decimals that you ask for:
 
 ## Links
 
+- [The hackathon challenge](https://api3dao.github.io/airnodehub-hackathon/)
 - [AirnodeHub](https://airnodehub.api3.org)
 - [Documentation](https://airnodehub-docs.api3.org)
 - [Verifying a signature](https://airnodehub-docs.api3.org/airnode/attestation)
