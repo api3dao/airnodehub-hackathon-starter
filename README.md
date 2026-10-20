@@ -1,6 +1,6 @@
-# AirnodeHub hackathon example
+# AirnodeHub hackathon starter template
 
-Bring signed API data into your contract. This repo fetches an ETH/USD price that the
+Bring signed API data into your contract. This template fetches an ETH/USD price that the
 [Nodary](https://airnodehub.api3.org/explore/nodary) Airnode v2 signed, verifies the signature on-chain and reads the
 price out of the signed JSON. Copy the two libraries in `contracts/` into your project, or fork the repo and inherit
 from `NodaryPriceConsumer`.
@@ -84,8 +84,8 @@ sequenceDiagram
 You need [Foundry](https://getfoundry.sh), [Node.js](https://nodejs.org) 22.18 or later and [pnpm](https://pnpm.io).
 
 ```sh
-git clone --recurse-submodules https://github.com/api3dao/airnodehub-hackathon-example.git
-cd airnodehub-hackathon-example
+git clone --recurse-submodules https://github.com/api3dao/airnodehub-hackathon.git
+cd airnodehub-hackathon/starter
 pnpm install
 forge test
 pnpm test
@@ -120,7 +120,7 @@ after `--rpc-url`, and set `CONSUMER_ADDRESS` to the address that the script pri
 The feed name is `ETH/USD` unless you give another one, such as `BTC/USD`. Deploy and submit with the same feed. To see
 every feed that Nodary serves, call `latestFeeds` without parameters.
 
-## What is in the repo
+## What is in the template
 
 | Path                                                                                       | What it is                                                                                                                           |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
