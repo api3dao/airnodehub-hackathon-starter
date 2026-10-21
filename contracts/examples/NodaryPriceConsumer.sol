@@ -43,7 +43,7 @@ abstract contract NodaryPriceConsumer {
         // The time. The signature covers the timestamp, so the timestamp is trustworthy from here on.
         if (timestamp + MAX_RESPONSE_AGE < block.timestamp) revert ResponseTooOld(timestamp);
 
-        // The data. The request hash fixes the projection, so the data has these two fields, in either order.
+        // The data. The request hash fixes the projection, so the data has these two fields.
         uint256 price = ProjectedJson.readUint(data, "price", 18);
         // Nodary gives its timestamps in milliseconds.
         uint256 priceTimestamp = ProjectedJson.readUint(data, "updatedAt", 0) / 1000;

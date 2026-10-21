@@ -1,8 +1,8 @@
-import { deriveRequestHash, fetchSignedResponse, verifySignedResponse } from './airnode-v2.ts';
-import { buildPriceRequest, DEFAULT_FEED_NAME, NODARY_AIRNODE_V2_ADDRESS, NODARY_AIRNODE_V2_URL } from './nodary.ts';
+import { verifySignedResponse } from './airnode-v2.ts';
+import { derivePriceRequestHash, fetchSignedPrice, NODARY_AIRNODE_V2_ADDRESS } from './nodary.ts';
+import { createScriptFetch, parseScriptArguments } from './script-options.ts';
 
-const feedName = process.argv[2] ?? DEFAULT_FEED_NAME;
-const request = buildPriceRequest(feedName);
-const signedResponse = await fetchSignedResponse(NODARY_AIRNODE_V2_URL, request);
-await verifySignedResponse(signedResponse, NODARY_AIRNODE_V2_ADDRESS, deriveRequestHash(request));
+const { feedName, route } = parseScriptArguments();
+const signedResponse = await fetchSignedPrice(feedName, route, createScriptFetch());
+await verifySignedResponse(signedResponse, NODARY_AIRNODE_V2_ADDRESS, derivePriceRequestHash(feedName, route));
 console.log(JSON.stringify(signedResponse, null, 2));

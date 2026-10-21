@@ -5,11 +5,12 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {JSONParserLib} from "solady/utils/JSONParserLib.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
-/// @title Reads fields of the JSON object that an Airnode v2 projection returns
+/// @title Reads the fields of a projected response, and escapes keys for the projection's pointers
 /// @notice A response projection cuts a response down to a flat object, such as
 /// {"price":2443.95,"updatedAt":1792403240691}. This library reads a top-level field of that object by its name.
 /// Solady's JSONParserLib parses the JSON and finds the field, and this library adds reading decimal numbers with a
-/// fixed number of decimal places.
+/// fixed number of decimal places. escapePointerToken writes a key into a pointer of the projection, for a contract that
+/// builds a request hash.
 /// @dev Verify the signature before you read the data. The signature is what makes sure that the data is the JSON that
 /// the Airnode produced, with the fields that your projection asked for. Invalid JSON reverts with
 /// JSONParserLib.ParsingFailed.
@@ -21,8 +22,8 @@ library ProjectedJson {
 
     /// @notice Reads a number that is not negative, with `decimals` decimal places
     /// @dev Digits after `decimals` decimal places are cut off, so 2443.959 with 2 decimals reads as 244395. The
-    /// Airnode signs numbers as JavaScript doubles, which keep about 15 significant digits. For a larger value that
-    /// must be exact, such as an amount in wei, project a field that the API sends as a string.
+    /// Airnode signs each number as the API wrote it, so an integer of any size, such as an amount in wei, keeps every
+    /// digit.
     /// @param json The signed data
     /// @param key Field name, as written in the JSON
     /// @param decimals Number of decimal places in the result, so 18 reads 2443.95 as 2443950000000000000000
@@ -51,6 +52,14 @@ library ProjectedJson {
         JSONParserLib.Item memory item = findValue(json, key);
         if (!item.isString()) revert UnexpectedValue(key);
         return JSONParserLib.decodeString(item.value());
+    }
+
+    /// @notice Escapes a key for a JSON Pointer of a projection, writing "~" as "~0" and "/" as "~1", so ETH/USD
+    /// becomes ETH~1USD
+    /// @dev "~" is replaced first, so the "~" of a "~1" that this writes is not escaped again. The result is not
+    /// escaped for JSON, so escape it with LibString.escapeJSON before it goes into a request.
+    function escapePointerToken(string memory key) internal pure returns (string memory) {
+        return LibString.replace(LibString.replace(key, "~", "~0"), "/", "~1");
     }
 
     function findValue(bytes memory json, string memory key) private pure returns (JSONParserLib.Item memory item) {

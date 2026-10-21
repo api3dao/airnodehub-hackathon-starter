@@ -159,6 +159,20 @@ contract ProjectedJsonTest is Test {
         harness.readUint("2443.95", "price", 0);
     }
 
+    function test_EscapePointerToken_EscapesSlashes() public pure {
+        assertEq(ProjectedJson.escapePointerToken("ETH/USD"), "ETH~1USD");
+    }
+
+    function test_EscapePointerToken_EscapesTildesBeforeSlashes() public pure {
+        assertEq(ProjectedJson.escapePointerToken("a~/b"), "a~0~1b");
+        assertEq(ProjectedJson.escapePointerToken("~1"), "~01");
+    }
+
+    function test_EscapePointerToken_LeavesOtherKeysAsTheyAre() public pure {
+        assertEq(ProjectedJson.escapePointerToken("BTC-USD"), "BTC-USD");
+        assertEq(ProjectedJson.escapePointerToken(""), "");
+    }
+
     function testFuzz_ReadUint_ReadsAnyInteger(uint256 value) public view {
         assertEq(harness.readUint(bytes.concat('{"value":', bytes(vm.toString(value)), "}"), "value", 0), value);
     }
