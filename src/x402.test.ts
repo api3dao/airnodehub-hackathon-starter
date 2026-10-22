@@ -80,10 +80,10 @@ const TRANSFER_WITH_AUTHORIZATION = [
   { name: 'nonce', type: 'bytes32' },
 ] as const;
 
-const assertPaysIn = async (asset: PaymentAsset) => {
+const assertPaysIn = async (asset: PaymentAsset, amount = '1000') => {
   const payerPrivateKey = generatePrivateKey();
   const payer = privateKeyToAccount(payerPrivateKey);
-  const { fetchFromAirnode, payments } = createPricedAirnode('1000');
+  const { fetchFromAirnode, payments } = createPricedAirnode(amount);
 
   const payingFetch = createPayingFetch(payerPrivateKey, asset, fetchFromAirnode);
   const response = await fetchSignedResponse(NODARY_AIRNODE_V2_URL, buildPriceRequest('ETH/USD'), payingFetch);
@@ -93,7 +93,7 @@ const assertPaysIn = async (asset: PaymentAsset) => {
   const [{ accepted, payload }] = payments as [PaymentPayload];
   const { authorization } = payload;
   assert.equal(accepted.asset, PAYMENT_ASSET_ADDRESSES[asset]);
-  assert.deepEqual([authorization.from, authorization.to, authorization.value], [payer.address, PAY_TO, '1000']);
+  assert.deepEqual([authorization.from, authorization.to, authorization.value], [payer.address, PAY_TO, amount]);
   const isSignedByPayer = await verifyTypedData({
     address: payer.address,
     domain: { ...accepted.extra, chainId: 84_532, verifyingContract: accepted.asset as Address },
@@ -115,9 +115,17 @@ test('pays for a priced call in USDC', () => assertPaysIn('USDC'));
 // The Airnode offers aUSD first, so this also shows that the client pays in the asset that it was given.
 test('pays for a priced call in aUSD', () => assertPaysIn('aUSD'));
 
-test('refuses to pay more than one dollar for a call', async () => {
-  const { fetchFromAirnode, payments } = createPricedAirnode('2000000');
-  const payingFetch = createPayingFetch(generatePrivateKey(), 'USDC', fetchFromAirnode);
+test('pays one dollar for a call in USDC', () => assertPaysIn('USDC', '1000000'));
+
+test('pays one dollar for a call in aUSD', () => assertPaysIn('aUSD', '1000000'));
+
+const assertRefusesToPayIn = async (asset: PaymentAsset) => {
+  const { fetchFromAirnode, payments } = createPricedAirnode('1000001');
+  const payingFetch = createPayingFetch(generatePrivateKey(), asset, fetchFromAirnode);
   await assert.rejects(fetchSignedResponse(NODARY_AIRNODE_V2_URL, buildPriceRequest('ETH/USD'), payingFetch));
   assert.equal(payments.length, 0);
-});
+};
+
+test('refuses to pay more than one dollar for a call in USDC', () => assertRefusesToPayIn('USDC'));
+
+test('refuses to pay more than one dollar for a call in aUSD', () => assertRefusesToPayIn('aUSD'));

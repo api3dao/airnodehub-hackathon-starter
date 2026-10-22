@@ -17,7 +17,8 @@ export type PaymentAsset = keyof typeof PAYMENT_ASSET_ADDRESSES;
 
 export const isPaymentAsset = (asset: string): asset is PaymentAsset => Object.hasOwn(PAYMENT_ASSET_ADDRESSES, asset);
 
-// One aUSD, with its 6 decimals. The x402 client caps a USDC payment at $1 on its own.
+// The most that one call can cost: one dollar, in either asset. Raise both to pay for pricier calls. aUSD has 6 decimals.
+const MAX_USD_PER_PAYMENT = '$1';
 const MAX_AUSD_PER_PAYMENT = '1000000';
 
 // Wraps fetch so that it answers a 402 by signing the payment that the Airnode asks for, in `asset`, and sending the
@@ -32,6 +33,7 @@ export const createPayingFetch = (
     schemes: [{ network: BASE_SEPOLIA, client: new ExactEvmScheme(privateKeyToAccount(payerPrivateKey)) }],
     // The client pays only in the assets that it knows, such as USDC, unless it is told to accept another.
     spendControls: {
+      maxAmountPerPayment: MAX_USD_PER_PAYMENT,
       allowedAssets: [
         { network: BASE_SEPOLIA, asset: PAYMENT_ASSET_ADDRESSES.aUSD, maxAmountPerPayment: MAX_AUSD_PER_PAYMENT },
       ],

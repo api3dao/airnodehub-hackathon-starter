@@ -135,7 +135,7 @@ const signedResponse = await fetchSignedResponse(airnodeUrl, request, payingFetc
 ```
 
 `createPayingFetch` wraps `fetch` with the [`@x402/fetch`](https://www.npmjs.com/package/@x402/fetch) client. It pays
-only in the asset that you give it, and refuses to pay more than $1 for one call.
+only in the asset that you give it.
 
 ## What is in the template
 
