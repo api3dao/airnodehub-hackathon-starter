@@ -10,10 +10,10 @@ import {ProjectedJson} from "../ProjectedJson.sol";
 /// the price to `consumePrice`, which a contract that inherits from this one implements.
 abstract contract NodaryPriceConsumer {
     /// @notice Longest time from the Airnode signing a response to the contract accepting it
-    uint256 public constant MAX_RESPONSE_AGE = 5 minutes;
+    uint256 public constant MAX_RESPONSE_AGE = 1 minutes;
 
     /// @notice Longest time from Nodary taking a price to the contract accepting it
-    uint256 public constant MAX_PRICE_AGE = 5 minutes;
+    uint256 public constant MAX_PRICE_AGE = 1 minutes;
 
     /// @notice Address that the Nodary Airnode v2 signs with
     /// @dev From the x-airnode extension of the document at https://airnode-nodary.fly.dev/

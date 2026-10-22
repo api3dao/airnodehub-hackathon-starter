@@ -12,13 +12,13 @@ Everything here is for Airnode v2, the version of Airnode that serves the APIs o
 ```mermaid
 sequenceDiagram
     participant App as Your app or agent
-    participant Airnode as Nodary Airnode v2
+    participant Airnode as Airnode v2
     participant Contract as Your contract
     Note over Contract: Stores the Airnode address and the request hash
     App->>Airnode: POST the operation, its parameters and a projection
     Airnode-->>App: timestamp, data and signature
     App->>Contract: submitResponse(timestamp, data, signature)
-    Note over Contract: Checks the signer, the request and the time, reads the fields and calls consumePrice
+    Note over Contract: Checks the signer, the request and the timestamp, reads the fields and acts on them
 ```
 
 1. **Pick the request before any data exists.** The request is an operation, its parameters and a projection. Its hash
@@ -154,9 +154,9 @@ only in the asset that you give it.
 ## The three checks
 
 The [tamper test](https://api3dao.github.io/airnodehub-hackathon/docs/#judging) of the hackathon sends your contract a real
-response with an edited value, a real response that is too old, a real response to a different request and a response
-signed with the wrong key. The example contract rejects all four ([tests](test/NodaryPriceConsumer.t.sol)), because it
-checks three things:
+response with an edited value, a real response that is too old for your use case, a real response to a different
+request and a response signed with the wrong key. The example contract rejects all four
+([tests](test/NodaryPriceConsumer.t.sol)), because it checks three things:
 
 - **The signer.** Compare the recovered address with an Airnode address that your contract stores. Never trust the
   `airnode` field or the `X-Airnode-Address` header, because whoever forges a response sets those too. The Airnode's
