@@ -153,7 +153,7 @@ only in the asset that you give it, and refuses to pay more than $1 for one call
 
 ## The three checks
 
-The [tamper test](https://api3dao.github.io/airnodehub-hackathon/#judging) of the hackathon sends your contract a real
+The [tamper test](https://api3dao.github.io/airnodehub-hackathon/docs/#judging) of the hackathon sends your contract a real
 response with an edited value, a real response that is too old, a real response to a different request and a response
 signed with the wrong key. The example contract rejects all four ([tests](test/NodaryPriceConsumer.t.sol)), because it
 checks three things:
@@ -165,7 +165,7 @@ checks three things:
   hash into the digest, so a real response to another request, such as another feed, flight or city, recovers a
   different signer. If your contract handles many requests, such as one for each bet, store a hash when you create each
   bet, or
-  [build it in the contract](https://api3dao.github.io/airnodehub-hackathon/from-api-to-contract#build-the-hash-in-the-contract)
+  [build it in the contract](https://api3dao.github.io/airnodehub-hackathon/docs/from-api-to-contract#build-the-hash-in-the-contract)
   from the bet's parameters.
 - **The time.** `timestamp` is when the Airnode signed. The signature covers it, so you can trust it after `verify`.
   Decide what fresh means for your contract. Anyone can submit the same response again, and `NodaryPriceConsumer`
@@ -198,7 +198,7 @@ The [passthrough](https://airnodehub-docs.api3.org/airnode/http-interface) takes
 parameters (`x-airnode-project=price:/ETH~1USD/value`). It returns the signature in `X-Airnode-*` headers and the
 projected JSON as the body, which is `data`. It derives the request hash in a different way, so a contract that stores
 one hash accepts responses from only one of the two routes.
-[From API to contract](https://api3dao.github.io/airnodehub-hackathon/from-api-to-contract#choose-a-route) compares the two.
+[From API to contract](https://api3dao.github.io/airnodehub-hackathon/docs/from-api-to-contract#choose-a-route) compares the two.
 
 ## Reading the data on-chain
 
@@ -240,7 +240,7 @@ numbers into integers with the number of decimals that you ask for:
    [`deriveRequestHash`](src/airnode-v2.ts) or [`derivePassthroughRequestHash`](src/airnode-v2.ts). Every response to
    that request carries the same `requestHash`, so you can also copy it from one call. If the contract gets a parameter value on-chain, such as a flight number for each policy,
    build the hash in the contract instead, as
-   [From API to contract](https://api3dao.github.io/airnodehub-hackathon/from-api-to-contract#build-the-hash-in-the-contract)
+   [From API to contract](https://api3dao.github.io/airnodehub-hackathon/docs/from-api-to-contract#build-the-hash-in-the-contract)
    shows.
 4. In your contract, store the Airnode address and the request hash, and keep the checks of
    [`submitResponse`](contracts/examples/NodaryPriceConsumer.sol).
@@ -258,8 +258,8 @@ numbers into integers with the number of decimals that you ask for:
 
 ## Links
 
-- [The hackathon challenge](https://api3dao.github.io/airnodehub-hackathon/)
+- [The hackathon challenge](https://api3dao.github.io/airnodehub-hackathon/docs/)
 - [AirnodeHub](https://airnodehub.api3.org)
-- [Documentation](https://airnodehub-docs.api3.org)
+- [AirnodeHub docs](https://airnodehub-docs.api3.org)
 - [Verifying a signature](https://airnodehub-docs.api3.org/airnode/attestation)
 - [Calling an Airnode, projections and payments](https://airnodehub-docs.api3.org/airnode/http-interface)
