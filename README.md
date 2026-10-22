@@ -84,8 +84,8 @@ sequenceDiagram
 You need [Foundry](https://getfoundry.sh), [Node.js](https://nodejs.org) 22.18 or later and [pnpm](https://pnpm.io).
 
 ```sh
-git clone --recurse-submodules https://github.com/api3dao/airnodehub-hackathon.git
-cd airnodehub-hackathon/starter
+git clone --recurse-submodules https://github.com/api3dao/airnodehub-hackathon-starter.git
+cd airnodehub-hackathon-starter
 pnpm install
 forge test
 pnpm test

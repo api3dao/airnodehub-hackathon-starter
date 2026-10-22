@@ -6,8 +6,8 @@ import { privateKeyToAccount } from 'viem/accounts';
 // Base Sepolia, a testnet, where the Airnodes take payment, so a priced call costs nothing real.
 export const BASE_SEPOLIA = 'eip155:84532';
 
-// The Airnodes accept both. USDC comes from Circle's faucet, and AirnodeHub USD (aUSD) from the faucet in this repo's
-// payment-token.
+// The Airnodes accept both. USDC comes from Circle's faucet, and AirnodeHub USD (aUSD) from the faucet that
+// https://api3dao.github.io/airnodehub-hackathon/docs/from-api-to-contract#paying-with-x402 describes.
 export const PAYMENT_ASSET_ADDRESSES = {
   USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
   aUSD: '0xbeA34973e5f67F18F656A2C6070C64326C791808',
