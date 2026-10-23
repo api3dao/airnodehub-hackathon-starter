@@ -1,5 +1,5 @@
 import { ExactEvmScheme } from '@x402/evm';
-import { wrapFetchWithPaymentFromConfig } from '@x402/fetch';
+import { decodePaymentResponseHeader, wrapFetchWithPaymentFromConfig } from '@x402/fetch';
 import type { Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -45,4 +45,11 @@ export const createPayingFetch = (
         requirements.filter((requirement) => requirement.asset.toLowerCase() === assetAddress),
     ],
   });
+};
+
+// The Airnode answers a paid call with the settlement of the payment in the PAYMENT-RESPONSE header, such as the
+// transaction that moved the payment. A call that was not paid has no settlement.
+export const readPaymentSettlement = (response: Response) => {
+  const header = response.headers.get('PAYMENT-RESPONSE');
+  return header ? decodePaymentResponseHeader(header) : undefined;
 };

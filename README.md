@@ -137,6 +137,16 @@ const signedResponse = await fetchSignedResponse(airnodeUrl, request, payingFetc
 `createPayingFetch` wraps `fetch` with the [`@x402/fetch`](https://www.npmjs.com/package/@x402/fetch) client. It pays
 only in the asset that you give it.
 
+The scripts print the transaction that settled each payment, so you can show the payment in a demo:
+
+```
+The payment settled in transaction https://sepolia.basescan.org/tx/0x…
+```
+
+They print it to stderr, so `pnpm --silent fetch-response > response.json` saves only the response. In your own code,
+read the settlement from the response of a paid call with [`readPaymentSettlement`](src/x402.ts), as
+[`createScriptFetch`](src/script-options.ts) does.
+
 ## What is in the template
 
 | Path                                                                                       | What it is                                                                                                                                                                                                                            |
@@ -148,7 +158,7 @@ only in the asset that you give it.
 | [`script/DeployNodaryPriceLogger.s.sol`](script/DeployNodaryPriceLogger.s.sol)             | Deploys `NodaryPriceLogger`.                                                                                                                                                                                                          |
 | [`src/airnode-v2.ts`](src/airnode-v2.ts)                                                   | For your app or agent: `deriveRequestHash` and `fetchSignedResponse` for `POST /`, `derivePassthroughRequestHash` and `fetchSignedPassthroughResponse` for the passthrough, and `verifySignedResponse` for both.                      |
 | [`src/nodary.ts`](src/nodary.ts)                                                           | The Nodary Airnode's URL and address, and the price request with its projection for each route.                                                                                                                                       |
-| [`src/x402.ts`](src/x402.ts)                                                               | `createPayingFetch`, a fetch that pays for a priced operation over x402, in USDC or aUSD on Base Sepolia.                                                                                                                             |
+| [`src/x402.ts`](src/x402.ts)                                                               | `createPayingFetch`, a fetch that pays for a priced operation over x402, in USDC or aUSD on Base Sepolia. `readPaymentSettlement` reads the transaction that settled a payment.                                                       |
 | [`test/`](test)                                                                            | Tests, including the tamper test. [`test/fixtures`](test/fixtures) holds real signed responses that `pnpm fetch-response` saved.                                                                                                      |
 
 ## The three checks
