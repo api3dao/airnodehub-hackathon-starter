@@ -105,7 +105,7 @@ pnpm submit-response
 
 ```
 Submitted {"price":2421.42,"updatedAt":1792411032300} in transaction 0xdd98d5fd18692ddef6ab7ff8f07d31d1ff8cf14ed88521f8380eb5a8c9df4939
-The contract consumed the ETH/USD price 2421.42, taken at 2026-10-19T11:57:12.000Z
+The contract consumed the price 2421.42, taken at 2026-10-19T11:57:12.000Z
 ```
 
 To deploy on a testnet, put your own `PRIVATE_KEY` and `RPC_URL` in `.env`, run the deploy command with your RPC URL
@@ -116,6 +116,7 @@ after `--rpc-url`, and set `CONSUMER_ADDRESS` to the address that the script pri
 | `pnpm request-hash [feed name] [--passthrough]`    | Prints the request hash, without calling the Airnode.                                |
 | `pnpm fetch-response [feed name] [--passthrough]`  | Fetches a signed response, checks it and prints it with `data` as the signed string. |
 | `pnpm submit-response [feed name] [--passthrough]` | Fetches a signed response, checks it and submits it to `CONSUMER_ADDRESS`.           |
+| `pnpm submit-response --file <response.json>`      | Submits the response in the file to `CONSUMER_ADDRESS`, without the off-chain check. |
 
 The feed name is `ETH/USD` unless you give another one, such as `BTC/USD`. To see every feed that Nodary serves, call
 `latestFeeds` without parameters. The scripts call `POST /` unless you give `--passthrough`, which sends Nodary's own
@@ -137,19 +138,30 @@ const signedResponse = await fetchSignedResponse(airnodeUrl, request, payingFetc
 `createPayingFetch` wraps `fetch` with the [`@x402/fetch`](https://www.npmjs.com/package/@x402/fetch) client. It pays
 only in the asset that you give it.
 
+The scripts print the transaction that settled each payment, so you can show the payment in a demo:
+
+```
+The payment settled in transaction https://sepolia.basescan.org/tx/0x…
+```
+
+They print it to stderr, so `pnpm --silent fetch-response > response.json` saves only the response. In your own code,
+read the settlement from the response of a paid call with [`readPaymentSettlement`](src/x402.ts), as
+[`createScriptFetch`](src/script-options.ts) does.
+
 ## What is in the template
 
-| Path                                                                                       | What it is                                                                                                                                                                                                                            |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`contracts/AirnodeV2Attestation.sol`](contracts/AirnodeV2Attestation.sol)                 | `verify` reverts unless the Airnode signed the data as its response to the request. `recoverSigner` returns the signer.                                                                                                               |
-| [`contracts/ProjectedJson.sol`](contracts/ProjectedJson.sol)                               | `readUint`, `readInt`, `readBool` and `readString` read a top-level field of the signed JSON by its name, with Solady's JSON parser. `escapePointerToken` escapes a key for a pointer of the projection, so ETH/USD becomes ETH~1USD. |
-| [`contracts/examples/NodaryPriceConsumer.sol`](contracts/examples/NodaryPriceConsumer.sol) | Abstract contract that checks a signed Nodary response, reads the price and passes it to `consumePrice`.                                                                                                                              |
-| [`contracts/examples/NodaryPriceLogger.sol`](contracts/examples/NodaryPriceLogger.sol)     | Implements `consumePrice` by emitting an event. Replace the event with your own logic.                                                                                                                                                |
-| [`script/DeployNodaryPriceLogger.s.sol`](script/DeployNodaryPriceLogger.s.sol)             | Deploys `NodaryPriceLogger`.                                                                                                                                                                                                          |
-| [`src/airnode-v2.ts`](src/airnode-v2.ts)                                                   | For your app or agent: `deriveRequestHash` and `fetchSignedResponse` for `POST /`, `derivePassthroughRequestHash` and `fetchSignedPassthroughResponse` for the passthrough, and `verifySignedResponse` for both.                      |
-| [`src/nodary.ts`](src/nodary.ts)                                                           | The Nodary Airnode's URL and address, and the price request with its projection for each route.                                                                                                                                       |
-| [`src/x402.ts`](src/x402.ts)                                                               | `createPayingFetch`, a fetch that pays for a priced operation over x402, in USDC or aUSD on Base Sepolia.                                                                                                                             |
-| [`test/`](test)                                                                            | Tests, including the tamper test. [`test/fixtures`](test/fixtures) holds real signed responses that `pnpm fetch-response` saved.                                                                                                      |
+| Path                                                                                       | What it is                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`contracts/AirnodeV2Attestation.sol`](contracts/AirnodeV2Attestation.sol)                 | `verify` reverts unless the Airnode signed the data as its response to the request. `recoverSigner` returns the signer.                                                                                                                                                                                                                    |
+| [`contracts/ProjectedJson.sol`](contracts/ProjectedJson.sol)                               | `readUint`, `readInt`, `readBool`, `readString`, `readTimestamp`, `readAddress`, `readBytes32` and `readHexUint` read a top-level field of the signed JSON by its name, with Solady's JSON parser, and `isNull` tells whether it is null. `escapePointerToken` escapes a key for a pointer of the projection, so ETH/USD becomes ETH~1USD. |
+| [`contracts/IsoTimestamp.sol`](contracts/IsoTimestamp.sol)                                 | `parse` reads an ISO 8601 date or date-time, such as `2026-10-23 10:55+02:00`, as a Unix timestamp. `ProjectedJson.readTimestamp` uses it.                                                                                                                                                                                                 |
+| [`contracts/examples/NodaryPriceConsumer.sol`](contracts/examples/NodaryPriceConsumer.sol) | Abstract contract that checks a signed Nodary response, reads the price and passes it to `consumePrice`.                                                                                                                                                                                                                                   |
+| [`contracts/examples/NodaryPriceLogger.sol`](contracts/examples/NodaryPriceLogger.sol)     | Implements `consumePrice` by emitting an event. Replace the event with your own logic.                                                                                                                                                                                                                                                     |
+| [`script/DeployNodaryPriceLogger.s.sol`](script/DeployNodaryPriceLogger.s.sol)             | Deploys `NodaryPriceLogger`.                                                                                                                                                                                                                                                                                                               |
+| [`src/airnode-v2.ts`](src/airnode-v2.ts)                                                   | For your app or agent: `deriveRequestHash` and `fetchSignedResponse` for `POST /`, `derivePassthroughRequestHash` and `fetchSignedPassthroughResponse` for the passthrough, and `verifySignedResponse` for both.                                                                                                                           |
+| [`src/nodary.ts`](src/nodary.ts)                                                           | The Nodary Airnode's URL and address, and the price request with its projection for each route.                                                                                                                                                                                                                                            |
+| [`src/x402.ts`](src/x402.ts)                                                               | `createPayingFetch`, a fetch that pays for a priced operation over x402, in USDC or aUSD on Base Sepolia. `readPaymentSettlement` reads the transaction that settled a payment.                                                                                                                                                            |
+| [`test/`](test)                                                                            | Tests, including the tamper test. [`test/fixtures`](test/fixtures) holds real signed responses that `pnpm fetch-response` saved.                                                                                                                                                                                                           |
 
 ## The three checks
 
@@ -176,6 +188,37 @@ signed it. A fresh signature can cover an old value. For example, Nodary updates
 once a day, so a response that the Airnode signed a second ago can carry a value that is a day old
 ([test](test/NodaryPriceConsumer.t.sol)). Check both timestamps when the age of the value matters.
 
+### Check that your contract is tamper-proof
+
+A contract that accepts a real response can still accept a forged one, so check that yours rejects every bad response
+too. `pnpm submit-response --file <response.json>` sends the response in a file to the contract as it is, without the
+off-chain check, so the contract has to reject a bad response on its own. Save a response with
+`pnpm --silent fetch-response > response.json`, change it for each case below and submit it. Each case should revert:
+
+| Case            | What to do with `response.json`                                                                                            | The example contract reverts with                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Edited value    | Change a digit of the price in `data`.                                                                                     | `NotSignedByAirnode` with an unknown signer       |
+| Too old         | Nothing. Wait until it is older than your contract accepts, such as `MAX_RESPONSE_AGE` in the example, and then submit it. | `ResponseTooOld`                                  |
+| Another request | Save `pnpm --silent fetch-response BTC/USD` instead, for a contract deployed for ETH/USD.                                  | `NotSignedByAirnode` with an unknown signer       |
+| Wrong key       | Replace `signature` with a signature from another key, as shown below.                                                     | `NotSignedByAirnode` with the address of that key |
+
+The Airnode signs the digest `keccak256(abi.encodePacked(requestHash, timestamp, data))` with EIP-191. To sign it with
+another key, put the values from the file into these commands:
+
+```sh
+digest=$(cast keccak $(cast abi-encode --packed 'f(bytes32,uint256,bytes)' <requestHash> <timestamp> $(cast from-utf8 '<data>')))
+cast wallet sign --private-key <another private key> $digest
+```
+
+The script prints the error of the contract:
+
+```
+Error: The contract rejected the response with NotSignedByAirnode(0x8eA5736F12d9D798c2D6AD37420d199555359792)
+```
+
+Also add the four cases to your Forge tests, as [`NodaryPriceConsumer.t.sol`](test/NodaryPriceConsumer.t.sol) does,
+so that they run again after each change to the contract.
+
 ## Projections
 
 A projection maps field names that you choose to [JSON Pointers](https://datatracker.ietf.org/doc/html/rfc6901) into
@@ -186,9 +229,8 @@ the full response. A pointer writes `/` in a key as `~1` and `~` as `~0`, so the
 - **The fields come in the byte order of their names**, whatever order the request used. So a request hash always comes
   with the same field order, such as `{"price":…,"updatedAt":…}`.
 - **At most 20 fields**, each with its own pointer that starts with `/`. For the whole response, send no projection.
-- **Project single values.** `ProjectedJson` reads numbers, strings and booleans in top-level fields. To read inside a
-  projected object, use Solady's `JSONParserLib` directly, such as
-  `JSONParserLib.parse(string(data)).at('"feed"').at('"value"')`.
+- **Project single values.** `ProjectedJson` reads single values in top-level fields. To read inside a projected
+  object, use Solady's `JSONParserLib` directly, such as `JSONParserLib.parse(string(data)).at('"feed"').at('"value"')`.
 - **A pointer to a field that is not there fails.** The Airnode answers with `400` and signs nothing, so you cannot get
   a signed proof that a field is missing.
 - **A pointer reaches array elements only by index**, such as `/flights/0/status`. Make sure that the upstream API
@@ -206,14 +248,22 @@ one hash accepts responses from only one of the two routes.
 [`JSONParserLib`](https://github.com/Vectorized/solady/blob/v0.1.26/src/utils/JSONParserLib.sol) and turns decimal
 numbers into integers with the number of decimals that you ask for:
 
-| Signed data             | Call                              | Result                               |
-| ----------------------- | --------------------------------- | ------------------------------------ |
-| `{"price":2443.95}`     | `readUint(data, "price", 18)`     | `2443950000000000000000`             |
-| `{"price":2443.959}`    | `readUint(data, "price", 2)`      | `244395`, the extra digit is cut off |
-| `{"price":0.00000012}`  | `readUint(data, "price", 18)`     | `120000000000`                       |
-| `{"temperature":-12.5}` | `readInt(data, "temperature", 1)` | `-125`                               |
-| `{"isFinal":true}`      | `readBool(data, "isFinal")`       | `true`                               |
-| `{"status":"Landed"}`   | `readString(data, "status")`      | `"Landed"`                           |
+| Signed data                                              | Call                                                        | Result                                       |
+| -------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------- |
+| `{"price":2443.95}`                                      | `readUint(data, "price", 18)`                               | `2443950000000000000000`                     |
+| `{"price":2443.959}`                                     | `readUint(data, "price", 2)`                                | `244395`, the extra digit is cut off         |
+| `{"price":0.00000012}`                                   | `readUint(data, "price", 18)`                               | `120000000000`                               |
+| `{"temperature":-12.5}`                                  | `readInt(data, "temperature", 1)`                           | `-125`                                       |
+| `{"isFinal":true}`                                       | `readBool(data, "isFinal")`                                 | `true`                                       |
+| `{"status":"Landed"}`                                    | `readString(data, "status")`                                | `"Landed"`                                   |
+| `{"mid":"0.0005"}`                                       | `readUint(data, "mid", 18)`                                 | `500000000000000`                            |
+| `{"funding":"-0.0000125"}`                               | `readInt(data, "funding", 9)`                               | `-12500`                                     |
+| `{"winnerId":null}`                                      | `isNull(data, "winnerId")`                                  | `true`                                       |
+| `{"endDate":"2024-11-05T12:00:00Z"}`                     | `readTimestamp(data, "endDate")`                            | `1730808000`                                 |
+| `{"departure":"2026-10-23 10:55+02:00"}`                 | `readTimestamp(data, "departure")`                          | `1792745700`                                 |
+| `{"vault":"0xE70f1e8b22a21e4Bb5188918a3033341b281E4c0"}` | `readAddress(data, "vault")`                                | `0xE70f1e8b22a21e4Bb5188918a3033341b281E4c0` |
+| `{"balance":"0x1bc16d674ec80000"}`                       | `readHexUint(data, "balance")`                              | `2000000000000000000`                        |
+| `{"outcomePrices":"[\"1\", \"0\"]"}`                     | `readUint(bytes(readString(data, "outcomePrices")), 0, 18)` | `1000000000000000000`                        |
 
 - **Verify before you read.** Only the signature makes the data trustworthy. Invalid JSON reverts with
   `JSONParserLib.ParsingFailed`, a missing field with `FieldNotFound` and a value of the wrong type with
@@ -223,7 +273,28 @@ numbers into integers with the number of decimals that you ask for:
   you can also skip the parser and compare `keccak256(data)` with the hash of each outcome that you expect.
 - **Numbers arrive as the API wrote them.** The Airnode copies each value from the text of the API response, so an
   integer of any size, such as an amount in wei, keeps every digit. A number has exponent notation only if the API
-  writes it that way, and `readUint` and `readInt` revert on it.
+  writes it that way, and `readUint` and `readInt` revert on it. `JSON.stringify` writes numbers below 0.000001 that
+  way, such as `1.2e-7`, so an API that runs on JavaScript can send one for a very small price.
+- **Some APIs write numbers as strings**, such as the Polymarket CLOB and Hyperliquid, so that no JSON parser rounds
+  them. `readUint` and `readInt` read a number with or without quotes, so a field that an API writes both ways, such as
+  Morpho's `totalAssets`, reads the same. A projection cannot remove the quotes, because a pointer selects a whole value.
+- **Check for null first.** An API often writes `null` for a value that is not known yet, such as the winner of a
+  PandaScore match that has not ended. The other functions revert on `null`, so branch on `isNull`, for example to
+  wait or to refund.
+- **Times.** `readTimestamp` reads an ISO 8601 date or date-time as Unix seconds, with
+  [`IsoTimestamp.parse`](contracts/IsoTimestamp.sol). The time can follow a `T` or a space, its seconds and their
+  fraction are optional, and it ends with `Z` or an offset such as `+02:00`, `+0200` or `+02`. A date-time without an
+  offset reverts, because it is the local time of a place that the data does not name. A time before 1970 reverts
+  too, because a Unix timestamp in a `uint256` starts there, so an old date, such as when an old company was founded,
+  does not read. If the API also gives the time as a number, such as Visual Crossing's `datetimeEpoch`, project that
+  number instead.
+- **Hex strings.** `readAddress` and `readBytes32` take only the full 40 or 64 digits, because leading zeros are part
+  of the bytes, and a shorter string could have lost zeros at either end. `readHexUint` reads a number of any length,
+  such as a balance from Ethereum JSON-RPC, which drops leading zeros. For an API that drops the leading zeros of an
+  id, `bytes32(readHexUint(data, "id"))` puts them back in front.
+- **JSON inside a string.** Polymarket writes `outcomes`, `outcomePrices` and `clobTokenIds` as JSON arrays inside
+  strings, such as `"[\"Yes\", \"No\"]"`. No pointer reaches inside a string, so project the whole string, and read
+  its items with the overloads of `readUint` and `readString` that take an index.
 - **Gas and size.** Reading a field costs about 17,000 gas, because each read parses the whole object. `submitResponse`
   in the example costs about 63,000 gas, plus whatever `consumePrice` does. `AirnodeV2Attestation` and `ProjectedJson`
   add about 6 KB to a contract, a quarter of the 24 KB limit.

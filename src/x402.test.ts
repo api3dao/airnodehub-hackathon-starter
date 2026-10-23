@@ -5,7 +5,13 @@ import { type Address, type Hex, verifyTypedData } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { fetchSignedResponse, type SignedResponse } from './airnode-v2.ts';
 import { buildPriceRequest, NODARY_AIRNODE_V2_URL } from './nodary.ts';
-import { BASE_SEPOLIA, createPayingFetch, PAYMENT_ASSET_ADDRESSES, type PaymentAsset } from './x402.ts';
+import {
+  BASE_SEPOLIA,
+  createPayingFetch,
+  PAYMENT_ASSET_ADDRESSES,
+  type PaymentAsset,
+  readPaymentSettlement,
+} from './x402.ts';
 
 const signedResponse = JSON.parse(
   readFileSync(new URL('../test/fixtures/nodary-eth-usd.json', import.meta.url), 'utf8')
@@ -45,6 +51,13 @@ interface PaymentPayload {
 
 const toBase64 = (value: unknown) => Buffer.from(JSON.stringify(value), 'utf8').toString('base64');
 
+const SETTLEMENT = {
+  success: true,
+  transaction: '0x6f1b2a6d7d8c6e3b9f0a4c5d2e1f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f',
+  network: BASE_SEPOLIA,
+  payer: '0x2222222222222222222222222222222222222222',
+};
+
 // Answers as a priced Airnode does: 402 with the requirements, then the signed response once a payment comes with the
 // call.
 const createPricedAirnode = (amount: string) => {
@@ -66,7 +79,7 @@ const createPricedAirnode = (amount: string) => {
       );
     }
     payments.push(JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf8')) as PaymentPayload);
-    return Response.json(signedResponse);
+    return Response.json(signedResponse, { headers: { 'PAYMENT-RESPONSE': toBase64(SETTLEMENT) } });
   };
   return { fetchFromAirnode, payments };
 };
@@ -129,3 +142,14 @@ const assertRefusesToPayIn = async (asset: PaymentAsset) => {
 test('refuses to pay more than one dollar for a call in USDC', () => assertRefusesToPayIn('USDC'));
 
 test('refuses to pay more than one dollar for a call in aUSD', () => assertRefusesToPayIn('aUSD'));
+
+test('reads the settlement of a paid call', async () => {
+  const { fetchFromAirnode } = createPricedAirnode('1000');
+  const payingFetch = createPayingFetch(generatePrivateKey(), 'aUSD', fetchFromAirnode);
+  const response = await payingFetch(NODARY_AIRNODE_V2_URL, { method: 'POST' });
+  assert.deepEqual(readPaymentSettlement(response), SETTLEMENT);
+});
+
+test('reads no settlement from a call that was not paid', () => {
+  assert.equal(readPaymentSettlement(Response.json(signedResponse)), undefined);
+});

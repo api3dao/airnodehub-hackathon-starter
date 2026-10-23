@@ -92,6 +92,7 @@ contract NodaryPriceConsumerTest is AirnodeV2Test {
 
     // Reads a response that `pnpm --silent fetch-response <feed name>` saved.
     function readFixture(string memory name) private view returns (SignedResponse memory) {
+        // forge-lint: disable-next-line(unsafe-cheatcode)
         string memory json = vm.readFile(string.concat("test/fixtures/", name));
         return SignedResponse({
             requestHash: vm.parseJsonBytes32(json, ".requestHash"),
