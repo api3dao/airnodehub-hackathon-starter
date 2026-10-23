@@ -105,7 +105,7 @@ pnpm submit-response
 
 ```
 Submitted {"price":2421.42,"updatedAt":1792411032300} in transaction 0xdd98d5fd18692ddef6ab7ff8f07d31d1ff8cf14ed88521f8380eb5a8c9df4939
-The contract consumed the ETH/USD price 2421.42, taken at 2026-10-19T11:57:12.000Z
+The contract consumed the price 2421.42, taken at 2026-10-19T11:57:12.000Z
 ```
 
 To deploy on a testnet, put your own `PRIVATE_KEY` and `RPC_URL` in `.env`, run the deploy command with your RPC URL
@@ -116,6 +116,7 @@ after `--rpc-url`, and set `CONSUMER_ADDRESS` to the address that the script pri
 | `pnpm request-hash [feed name] [--passthrough]`    | Prints the request hash, without calling the Airnode.                                |
 | `pnpm fetch-response [feed name] [--passthrough]`  | Fetches a signed response, checks it and prints it with `data` as the signed string. |
 | `pnpm submit-response [feed name] [--passthrough]` | Fetches a signed response, checks it and submits it to `CONSUMER_ADDRESS`.           |
+| `pnpm submit-response --file <response.json>`      | Submits the response in the file to `CONSUMER_ADDRESS`, without the off-chain check. |
 
 The feed name is `ETH/USD` unless you give another one, such as `BTC/USD`. To see every feed that Nodary serves, call
 `latestFeeds` without parameters. The scripts call `POST /` unless you give `--passthrough`, which sends Nodary's own
@@ -185,6 +186,37 @@ The data can have its own timestamp, such as Nodary's `updatedAt`. It tells you 
 signed it. A fresh signature can cover an old value. For example, Nodary updates the ankrETH/ETH exchange rate about
 once a day, so a response that the Airnode signed a second ago can carry a value that is a day old
 ([test](test/NodaryPriceConsumer.t.sol)). Check both timestamps when the age of the value matters.
+
+### Check that your contract is tamper-proof
+
+A contract that accepts a real response can still accept a forged one, so check that yours rejects every bad response
+too. `pnpm submit-response --file <response.json>` sends the response in a file to the contract as it is, without the
+off-chain check, so the contract has to reject a bad response on its own. Save a response with
+`pnpm --silent fetch-response > response.json`, change it for each case below and submit it. Each case should revert:
+
+| Case            | What to do with `response.json`                                                                                            | The example contract reverts with                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Edited value    | Change a digit of the price in `data`.                                                                                     | `NotSignedByAirnode` with an unknown signer       |
+| Too old         | Nothing. Wait until it is older than your contract accepts, such as `MAX_RESPONSE_AGE` in the example, and then submit it. | `ResponseTooOld`                                  |
+| Another request | Save `pnpm --silent fetch-response BTC/USD` instead, for a contract deployed for ETH/USD.                                  | `NotSignedByAirnode` with an unknown signer       |
+| Wrong key       | Replace `signature` with a signature from another key, as shown below.                                                     | `NotSignedByAirnode` with the address of that key |
+
+The Airnode signs the digest `keccak256(abi.encodePacked(requestHash, timestamp, data))` with EIP-191. To sign it with
+another key, put the values from the file into these commands:
+
+```sh
+digest=$(cast keccak $(cast abi-encode --packed 'f(bytes32,uint256,bytes)' <requestHash> <timestamp> $(cast from-utf8 '<data>')))
+cast wallet sign --private-key <another private key> $digest
+```
+
+The script prints the error of the contract:
+
+```
+Error: The contract rejected the response with NotSignedByAirnode(0x8eA5736F12d9D798c2D6AD37420d199555359792)
+```
+
+Also add the four cases to your Forge tests, as [`NodaryPriceConsumer.t.sol`](test/NodaryPriceConsumer.t.sol) does,
+so that they run again after each change to the contract.
 
 ## Projections
 

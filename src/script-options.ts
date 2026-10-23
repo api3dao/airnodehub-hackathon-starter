@@ -4,14 +4,26 @@ import type { AirnodeV2Route } from './airnode-v2.ts';
 import { DEFAULT_FEED_NAME } from './nodary.ts';
 import { createPayingFetch, isPaymentAsset, readPaymentSettlement } from './x402.ts';
 
+const SCRIPT_OPTIONS = { passthrough: { type: 'boolean', default: false } } as const;
+
 // Every script takes `[feed name] [--passthrough]`, and calls POST / unless it is given --passthrough.
+const readFeedNameAndRoute = (positionals: string[], passthrough: boolean) => {
+  const route: AirnodeV2Route = passthrough ? 'passthrough' : 'post';
+  return { feedName: positionals[0] ?? DEFAULT_FEED_NAME, route };
+};
+
 export const parseScriptArguments = () => {
+  const { positionals, values } = parseArgs({ allowPositionals: true, options: SCRIPT_OPTIONS });
+  return readFeedNameAndRoute(positionals, values.passthrough);
+};
+
+// submit-response also takes `--file <response.json>`, to submit a saved response instead of fetching one.
+export const parseSubmitArguments = () => {
   const { positionals, values } = parseArgs({
     allowPositionals: true,
-    options: { passthrough: { type: 'boolean', default: false } },
+    options: { ...SCRIPT_OPTIONS, file: { type: 'string' } },
   });
-  const route: AirnodeV2Route = values.passthrough ? 'passthrough' : 'post';
-  return { feedName: positionals[0] ?? DEFAULT_FEED_NAME, route };
+  return { ...readFeedNameAndRoute(positionals, values.passthrough), responseFile: values.file };
 };
 
 // The Airnode answers an unpaid call to a priced operation with only {"error":"Payment required"}.
