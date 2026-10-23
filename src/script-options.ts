@@ -14,11 +14,20 @@ export const parseScriptArguments = () => {
   return { feedName: positionals[0] ?? DEFAULT_FEED_NAME, route };
 };
 
+// The Airnode answers an unpaid call to a priced operation with only {"error":"Payment required"}.
+const fetchWithoutPayer: typeof fetch = async (input, init) => {
+  const response = await fetch(input, init);
+  if (response.status !== 402) return response;
+  throw new Error(
+    'The operation is priced and answered 402. Set PAYER_PRIVATE_KEY in .env to an account that holds testnet USDC or aUSD on Base Sepolia, and the scripts pay for it'
+  );
+};
+
 // The scripts pay for a priced operation when PAYER_PRIVATE_KEY is set, in PAYMENT_ASSET, which is USDC unless set to
-// aUSD. Without a payer, a priced operation fails with 402.
+// aUSD.
 export const createScriptFetch = (): typeof fetch => {
   const payerPrivateKey = process.env.PAYER_PRIVATE_KEY;
-  if (!payerPrivateKey) return fetch;
+  if (!payerPrivateKey) return fetchWithoutPayer;
   if (!isHex(payerPrivateKey)) throw new Error('PAYER_PRIVATE_KEY is not a 0x-prefixed hex string');
 
   const asset = process.env.PAYMENT_ASSET ?? 'USDC';
