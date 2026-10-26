@@ -228,7 +228,9 @@ the full response. A pointer writes `/` in a key as `~1` and `~` as `~0`, so the
   contract that stores the request hash knows which fields `data` has.
 - **The fields come in the byte order of their names**, whatever order the request used. So a request hash always comes
   with the same field order, such as `{"price":…,"updatedAt":…}`.
-- **At most 20 fields**, each with its own pointer that starts with `/`. For the whole response, send no projection.
+- **At most 20 fields**, each with its own pointer that starts with `/`. A pointer cannot be inside the value of another
+  pointer, such as `/flights/0` with `/flights/0/status`, or the Airnode answers with `400`. For the whole response,
+  send no projection.
 - **Project single values.** `ProjectedJson` reads single values in top-level fields. To read inside a projected
   object, use Solady's `JSONParserLib` directly, such as `JSONParserLib.parse(string(data)).at('"feed"').at('"value"')`.
 - **A pointer to a field that is not there fails.** The Airnode answers with `400` and signs nothing, so you cannot get
