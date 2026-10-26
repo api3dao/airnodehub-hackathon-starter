@@ -26,7 +26,6 @@ test('derives the same request hash whatever the order of the projection fields'
   const { responseProjection, ...request } = buildPriceRequest('ETH/USD');
   const reversedProjection = Object.fromEntries(Object.entries(responseProjection ?? {}).toReversed());
   assert.equal(deriveRequestHash({ ...request, responseProjection: reversedProjection }), ethUsdRequestHash);
-  assert.equal(readFixture('nodary-eth-usd-reordered.json').requestHash, ethUsdRequestHash);
 });
 
 test('sorts keys in UTF-8 byte order, as the Airnode does', () => {

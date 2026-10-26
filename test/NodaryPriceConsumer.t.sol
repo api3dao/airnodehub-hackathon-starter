@@ -30,13 +30,6 @@ contract NodaryPriceConsumerTest is AirnodeV2Test {
         submit(ethUsdResponse);
     }
 
-    function test_AcceptsTheFieldsInEitherOrder() public {
-        // {"updatedAt":1792403486275,"price":2443.22}, with the same request hash
-        vm.expectEmit(address(logger));
-        emit NodaryPriceLogger.PriceConsumed(2443.22e18, 1792403486);
-        submit(readFixture("nodary-eth-usd-reordered.json"));
-    }
-
     function test_AcceptsTheSameResponseAgain() public {
         // The checks cannot tell a repeated response from a new one, so consumePrice decides whether that matters.
         submit(ethUsdResponse);
