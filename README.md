@@ -126,17 +126,17 @@ same feed and the same route.
 ### Paying for a priced operation
 
 A priced operation answers `402` until the call comes with an x402 payment. Set `PAYER_PRIVATE_KEY` in `.env` to an
-account that holds testnet USDC or aUSD on Base Sepolia, and the scripts pay for such a call. The account needs no ETH,
-because the facilitator submits the transfer. They pay in USDC unless `PAYMENT_ASSET` is `aUSD`. In your own code, pass
-the fetch from [`createPayingFetch`](src/x402.ts) to either fetch function:
+account that holds testnet aUSD on Base Sepolia, and the scripts pay for such a call. The account needs no ETH, because
+the facilitator submits the transfer. In your own code, pass the fetch from [`createPayingFetch`](src/x402.ts) to either
+fetch function:
 
 ```ts
-const payingFetch = createPayingFetch(payerPrivateKey, 'USDC');
+const payingFetch = createPayingFetch(payerPrivateKey);
 const signedResponse = await fetchSignedResponse(airnodeUrl, request, payingFetch);
 ```
 
 `createPayingFetch` wraps `fetch` with the [`@x402/fetch`](https://www.npmjs.com/package/@x402/fetch) client. It pays
-only in the asset that you give it.
+only in aUSD, and at most one dollar for a call.
 
 The scripts print the transaction that settled each payment, so you can show the payment in a demo:
 
@@ -160,7 +160,7 @@ read the settlement from the response of a paid call with [`readPaymentSettlemen
 | [`script/DeployNodaryPriceLogger.s.sol`](script/DeployNodaryPriceLogger.s.sol)             | Deploys `NodaryPriceLogger`.                                                                                                                                                                                                                                                                                                               |
 | [`src/airnode-v2.ts`](src/airnode-v2.ts)                                                   | For your app or agent: `deriveRequestHash` and `fetchSignedResponse` for `POST /`, `derivePassthroughRequestHash` and `fetchSignedPassthroughResponse` for the passthrough, and `verifySignedResponse` for both.                                                                                                                           |
 | [`src/nodary.ts`](src/nodary.ts)                                                           | The Nodary Airnode's URL and address, and the price request with its projection for each route.                                                                                                                                                                                                                                            |
-| [`src/x402.ts`](src/x402.ts)                                                               | `createPayingFetch`, a fetch that pays for a priced operation over x402, in USDC or aUSD on Base Sepolia. `readPaymentSettlement` reads the transaction that settled a payment.                                                                                                                                                            |
+| [`src/x402.ts`](src/x402.ts)                                                               | `createPayingFetch`, a fetch that pays for a priced operation over x402, in aUSD on Base Sepolia. `readPaymentSettlement` reads the transaction that settled a payment.                                                                                                                                                                    |
 | [`test/`](test)                                                                            | Tests, including the tamper test. [`test/fixtures`](test/fixtures) holds real signed responses that `pnpm fetch-response` saved.                                                                                                                                                                                                           |
 
 ## The three checks
