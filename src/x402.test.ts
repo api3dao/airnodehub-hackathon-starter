@@ -5,13 +5,7 @@ import { type Address, type Hex, verifyTypedData } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { fetchSignedResponse, type SignedResponse } from './airnode-v2.ts';
 import { buildPriceRequest, NODARY_AIRNODE_V2_URL } from './nodary.ts';
-import {
-  BASE_SEPOLIA,
-  createPayingFetch,
-  PAYMENT_ASSET_ADDRESSES,
-  type PaymentAsset,
-  readPaymentSettlement,
-} from './x402.ts';
+import { AUSD_ADDRESS, BASE_SEPOLIA, createPayingFetch, readPaymentSettlement } from './x402.ts';
 
 const signedResponse = JSON.parse(
   readFileSync(new URL('../test/fixtures/nodary-eth-usd.json', import.meta.url), 'utf8')
@@ -19,27 +13,16 @@ const signedResponse = JSON.parse(
 
 const PAY_TO: Address = '0x1111111111111111111111111111111111111111';
 
-// What an Airnode offers for a call priced at $0.001, in its order, with the EIP-712 domain of each token in `extra`.
-const buildRequirements = (amount: string) => [
-  {
-    scheme: 'exact',
-    network: BASE_SEPOLIA,
-    amount,
-    asset: PAYMENT_ASSET_ADDRESSES.aUSD,
-    payTo: PAY_TO,
-    maxTimeoutSeconds: 60,
-    extra: { name: 'AirnodeHub USD', version: '1' },
-  },
-  {
-    scheme: 'exact',
-    network: BASE_SEPOLIA,
-    amount,
-    asset: PAYMENT_ASSET_ADDRESSES.USDC,
-    payTo: PAY_TO,
-    maxTimeoutSeconds: 60,
-    extra: { name: 'USDC', version: '2' },
-  },
-];
+// What an Airnode offers for a call, with the EIP-712 domain of the token in `extra`.
+const buildAusdRequirement = (amount: string) => ({
+  scheme: 'exact',
+  network: BASE_SEPOLIA,
+  amount,
+  asset: AUSD_ADDRESS,
+  payTo: PAY_TO,
+  maxTimeoutSeconds: 60,
+  extra: { name: 'AirnodeHub USD', version: '1' },
+});
 
 interface PaymentPayload {
   accepted: { asset: string; amount: string; payTo: string; extra: { name: string; version: string } };
@@ -58,7 +41,7 @@ const SETTLEMENT = {
   payer: '0x2222222222222222222222222222222222222222',
 };
 
-// Answers as a priced Airnode does: 402 with the requirements, then the signed response once a payment comes with the
+// Answers as a priced Airnode does: 402 with the requirement, then the signed response once a payment comes with the
 // call.
 const createPricedAirnode = (amount: string) => {
   const payments: PaymentPayload[] = [];
@@ -71,7 +54,7 @@ const createPricedAirnode = (amount: string) => {
         x402Version: 2,
         error: 'Payment required',
         resource,
-        accepts: buildRequirements(amount),
+        accepts: [buildAusdRequirement(amount)],
       };
       return Response.json(
         { error: 'Payment required' },
@@ -93,19 +76,19 @@ const TRANSFER_WITH_AUTHORIZATION = [
   { name: 'nonce', type: 'bytes32' },
 ] as const;
 
-const assertPaysIn = async (asset: PaymentAsset, amount = '1000') => {
+const assertPays = async (amount: string) => {
   const payerPrivateKey = generatePrivateKey();
   const payer = privateKeyToAccount(payerPrivateKey);
   const { fetchFromAirnode, payments } = createPricedAirnode(amount);
 
-  const payingFetch = createPayingFetch(payerPrivateKey, asset, fetchFromAirnode);
+  const payingFetch = createPayingFetch(payerPrivateKey, fetchFromAirnode);
   const response = await fetchSignedResponse(NODARY_AIRNODE_V2_URL, buildPriceRequest('ETH/USD'), payingFetch);
 
   assert.deepEqual(response, signedResponse);
   assert.equal(payments.length, 1);
   const [{ accepted, payload }] = payments as [PaymentPayload];
   const { authorization } = payload;
-  assert.equal(accepted.asset, PAYMENT_ASSET_ADDRESSES[asset]);
+  assert.equal(accepted.asset, AUSD_ADDRESS);
   assert.deepEqual([authorization.from, authorization.to, authorization.value], [payer.address, PAY_TO, amount]);
   const isSignedByPayer = await verifyTypedData({
     address: payer.address,
@@ -123,29 +106,20 @@ const assertPaysIn = async (asset: PaymentAsset, amount = '1000') => {
   assert.ok(isSignedByPayer);
 };
 
-test('pays for a priced call in USDC', () => assertPaysIn('USDC'));
+test('pays for a priced call in aUSD', () => assertPays('1000'));
 
-// The Airnode offers aUSD first, so this also shows that the client pays in the asset that it was given.
-test('pays for a priced call in aUSD', () => assertPaysIn('aUSD'));
+test('pays one dollar for a call', () => assertPays('1000000'));
 
-test('pays one dollar for a call in USDC', () => assertPaysIn('USDC', '1000000'));
-
-test('pays one dollar for a call in aUSD', () => assertPaysIn('aUSD', '1000000'));
-
-const assertRefusesToPayIn = async (asset: PaymentAsset) => {
+test('refuses to pay more than one dollar for a call', async () => {
   const { fetchFromAirnode, payments } = createPricedAirnode('1000001');
-  const payingFetch = createPayingFetch(generatePrivateKey(), asset, fetchFromAirnode);
+  const payingFetch = createPayingFetch(generatePrivateKey(), fetchFromAirnode);
   await assert.rejects(fetchSignedResponse(NODARY_AIRNODE_V2_URL, buildPriceRequest('ETH/USD'), payingFetch));
   assert.equal(payments.length, 0);
-};
-
-test('refuses to pay more than one dollar for a call in USDC', () => assertRefusesToPayIn('USDC'));
-
-test('refuses to pay more than one dollar for a call in aUSD', () => assertRefusesToPayIn('aUSD'));
+});
 
 test('reads the settlement of a paid call', async () => {
   const { fetchFromAirnode } = createPricedAirnode('1000');
-  const payingFetch = createPayingFetch(generatePrivateKey(), 'aUSD', fetchFromAirnode);
+  const payingFetch = createPayingFetch(generatePrivateKey(), fetchFromAirnode);
   const response = await payingFetch(NODARY_AIRNODE_V2_URL, { method: 'POST' });
   assert.deepEqual(readPaymentSettlement(response), SETTLEMENT);
 });
